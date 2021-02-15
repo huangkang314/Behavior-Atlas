@@ -3,12 +3,12 @@ genPath = genpath('./');
 addpath(genPath)
 
 %% get filename
-filepath = './data';
-fileName = '/Volumes/wei/hanyaning/BehaviorAtlas_version_control/data/three_d/demo_single_Data3d.mat';
+filepath = '..\..\data\single_experiment';
+fileName = 'demo_single_Data3d.mat';
 
 %% get videoname
-videopath = '/Volumes/wei/hanyaning/BehaviorAtlas_version_control/data/videos/data';
-videoName = 'demo_single_Data3d.avi';
+videopath = '..\..\data\single_experiment';
+videoName = 'demo_single_Data3d.mp4';
 
 %% Import dataset
 clear global
@@ -23,7 +23,6 @@ import_video(video_name);
 %% Preprocess ->  Artifact Correction
 method = 'median filtering';
 WinWD = 1000; %ms
-
 artifact_correction(method, WinWD);
 
 %% Aanlysis  -> 1. body alignment
@@ -34,7 +33,7 @@ BA.VAIndex = 14;
 BA.SDSize = 25;
 BA.SDSDimens = [40,41,42];
 body_alignment(BA);
-
+BeA_DecParam = BeA.BeA_DecParam;
 %% Aanlysis -> 2. Feature Selection
 
 body_parts = BeA.DataInfo.Skl;
@@ -55,22 +54,38 @@ end
 BeA_DecParam.selection = selection;
 %% Aanlysis -> Behavior Decomposing
 
-% BeA_SegParam.L1
-BeA_DecParam.L1.ralg = 'merge';
-BeA_DecParam.L1.redL = 5;
-BeA_DecParam.L1.calg = 'density';
-BeA_DecParam.L1.kF = 96;
+% BeA_SegParam.paraP
+BeA_DecParam.paraP.ralg = 'merge';
+BeA_DecParam.paraP.redL = 5;
+BeA_DecParam.paraP.calg = 'density';
+BeA_DecParam.paraP.kF = 96;
 
-% BeA_SegParam.L2
-BeA_DecParam.L2.kerType = 'g';
-BeA_DecParam.L2.kerBand = 'nei';
-BeA_DecParam.L2.k = 24; % Cluster number
-BeA_DecParam.L2.nMi = 100; % Minimum lengths (ms)
-BeA_DecParam.L2.nMa = 2000; % Maximum lengths (ms)
-BeA_DecParam.L2.Ini = 'p'; % Initialization method
+% BeA_SegParam.paraM
+BeA_DecParam.paraM.kerType = 'g';
+BeA_DecParam.paraM.kerBand = 'nei';
+BeA_DecParam.paraM.k = 30; % Number of segment types
+BeA_DecParam.paraM.nMi = 100; % Minimum lengths (ms)
+BeA_DecParam.paraM.nMa = 2000; % Maximum lengths (ms)
+BeA_DecParam.paraM.Ini = 'p'; % Initialization method
 
 behavior_decomposing(BeA_DecParam);
 
+%% Reclustering movements with velocity dimension
+kR = 11; % Number of cluster
+labels = recluster_Movement(BeA.BeA_DecData.paraM.MedData, kR);
 
+BeA.reClusData = BeA.BeA_DecData.paraM.MedData;
+BeA.reClusData.G = L2G_Slow(labels);
+BeA.reClusData.kR = kR;
+
+% Saving
+disp('saving, please wait......')
+save(['..\..\data\single_experiment\', fileName(1:end-4), '_BeA_Struct.mat'], 'BeA', '-v7.3')
+disp('save successfully!')
+
+%% Segmenting video (optional)
+
+% savepath = '..\..\data\single_experiment';
+% seg_video(savepath)
     
 

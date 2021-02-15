@@ -18,6 +18,7 @@ function G = L2G_Slow(l)
 % History
 %   create  -  Feng Zhou (zhfe99@gmail.com), 01-04-2009
 %   modify  -  Feng Zhou (zhfe99@gmail.com), 12-20-2009
+%   modify  -  Yaning Han  (yn.han@siat.ac.cn), 07-16-2020
 
 k = max(unique(l));
 n = length(l);

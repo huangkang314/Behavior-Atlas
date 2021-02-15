@@ -1,9 +1,9 @@
-function labels = recluster_Movement(paraL, segDM)
+function labels = recluster_Movement(segDM, varargin)
 % re-clustering the movements with the added velocity dimension
 %
 % Input
-%       - paraL          -  parameters of umap running for self-movement space
 %       - segDM          -  decomposed self-movement data and parameters
+%       - k              -  the number of cluster
 %
 % Output
 %       - labels             -  new labels of re-clustering
@@ -17,7 +17,7 @@ fs = BeA.DataInfo.VideoInfo.FrameRate;
 pixel2mm = 0.88;
 
 [embedd2, ~, ~] = run_umap(segDM.T, ...
-                    'n_components', paraL.Nc, 'min_dist', paraL.MinD, 'n_neighbors', paraL.Nn);
+    'n_components', 2, 'min_dist', 0.3, 'n_neighbors', 30);
 
 %% calculating velocity
 cent_X = BeA.PreproData.X(:, 13);
@@ -48,17 +48,25 @@ end
 seg_vel_nr = (seg_vel - mean(seg_vel))/(max(seg_vel) - min(seg_vel));
 embedd3 = [embedd2(:, 1:2), seg_vel_nr];
 
-%% reclustering 
+%% reclustering
 
 % eva = evalclusters(embedd3, @re_clusterSimple, 'CalinskiHarabasz', 'klist',[1:20]);
 % figure; plot(eva)
 
-labels = re_cluster(embedd3, 11);
+if length(varargin) < 1
+    k = ps([], [], 11);
+elseif length(varargin) == 1 && ~isempty( varargin{1})
+    k = varargin{1};
+else
+    error('please input the correct parameters!')
+end
 
-BeA.BeA_DecData.L2.velnm = seg_vel_nr;
-BeA.BeA_MapData.L2.embedding = embedd2;
+labels = re_cluster(embedd3, k);
 
-close 
+BeA.BeA_DecData.paraM.velnm = seg_vel_nr;
+BeA.BeA_MapData.paraM.embedding = embedd2;
+
+close
 
 n_clus = max(unique(labels));
 n_genColor = 10;

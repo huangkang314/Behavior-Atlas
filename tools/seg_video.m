@@ -10,12 +10,12 @@ function seg_video(savepath)
 % History
 %   create  -  Kang Huang  (kang.huang@siat.ac.cn), 03-02-2020
 
-global HBT
+global BeA
 
-labels = G2L_Slow(HBT.HBT_DecData.L2.reClusData.G);
-n_clus = size(HBT.HBT_DecData.L2.reClusData.G, 1);
-embedd2 = HBT.HBT_MapData.L2.embedding;
-vel_nm = HBT.HBT_DecData.L2.velnm;
+labels = G2L_Slow(BeA.reClusData.G);
+n_clus = size(BeA.reClusData.G, 1);
+embedd2 = BeA.BeA_MapData.paraM.embedding;
+vel_nm = BeA.BeA_DecData.paraM.velnm;
 
 embedd3 = [embedd2, vel_nm];
 
@@ -24,33 +24,33 @@ D = pdist(embedd3, 'seuclidean');
 D = squareform(D);
 % D = 1-conKnl(D, 'knl','g','nei', 0.1);
 
-CQI = calClus_qulity(D, labels);
+CQI = calClus_qulity_fast(D, labels);
 
 % set the file path
 mkdir([savepath, '/Video_seg']);
 
-Seg = HBT.HBT_DecData.L2.reClusData;
+Seg = BeA.reClusData;
 try
-    fs = HBT.DataInfo.VideoInfo.FrameRate;
+    fs = BeA.DataInfo.VideoInfo.FrameRate;
 catch
     prompt = 'Please input the FrameRate: ';
     fs = input(prompt);
 end
 
 try
-    cut_offset = HBT.PreproInfo.CutData.Start * fs;
+    cut_offset = BeA.PreproInfo.CutData.Start * fs;
 catch
     cut_offset = 0;
 end
 
-data_len = size(HBT.HBT_DecData.XY, 2);
+data_len = size(BeA.BeA_DecData.XY, 2);
 
 %% creat subfolders
 
 Cutfilepath = [savepath, '/Video_seg', '/'];
-Cutfiledocname = HBT.DataInfo.VideoName(1:end-4);
+Cutfiledocname = BeA.DataInfo.VideoName(1:end-4);
 mkdir([Cutfilepath, Cutfiledocname]);
-vidobj = HBT.DataInfo.VideoInfo;
+vidobj = BeA.DataInfo.VideoInfo;
 
 n_clust = size(Seg.G, 1);
 for m = 1:n_clust
@@ -88,7 +88,7 @@ for m = 1:size(savelist,1)
     disp([Cutfilename, 'Successfully Saved!'])
 end
 close(h)
-disp('save segment list。�?��??')
+disp('save segment list......')
 save([Cutfilepath,Cutfiledocname,'/savelist.mat'], 'savelist')
-disp('save complete�?')
+disp('save complete!')
 

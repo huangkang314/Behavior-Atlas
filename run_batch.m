@@ -5,13 +5,13 @@ genPath = genpath('./');
 addpath(genPath)
 
 %% get filename
-filepath = 'Z:\hanyaning\BehaviorAtlas_version_control\data\three_d\shank3';
+filepath = '..\..\data\shank3';
 fileFolder = fullfile(filepath);
 dirOutput = dir(fullfile(fileFolder,'*.mat'));
 fileNames = {dirOutput.name}';
 
 %% get videoname
-videopath = 'Z:\hanyaning\BehaviorAtlas_version_control\data\videos\shank3';
+videopath = '..\..\data\shank3';
 videoFolder = fullfile(videopath);
 videoOutput = dir(fullfile(videoFolder,'*.avi'));
 videoNames = {videoOutput.name}';
@@ -24,17 +24,17 @@ for iData = 1:size(fileNames,1)
     global BeA
     data_3d_name = [filepath,'\',fileNames{iData,1}];
     import_3d(data_3d_name);
-
+    
     %% Import dataset
     video_name = [videopath,'\',videoNames{iData,1}];
     import_video(video_name);
-
+    
     %% Preprocess ->  Artifact Correction
     method = 'median filtering';
     WinWD = 1000; %ms
-
+    
     artifact_correction(method, WinWD);
-
+    
     %% Aanlysis  -> 1. body alignment
     BA.Cen = 1;
     BA.VA = 1;
@@ -43,43 +43,55 @@ for iData = 1:size(fileNames,1)
     BA.SDSize = 25;
     BA.SDSDimens = [40,41,42];
     body_alignment(BA);
-
+    BeA_DecParam = BeA.BeA_DecParam;
     %% Aanlysis -> 2. Feature Selection
-
+    
     body_parts = BeA.DataInfo.Skl;
     nBodyParts = length(body_parts);
     weight = ones(1, nBodyParts);
     featNames = body_parts';
     selection = [1,1,1,1,1,1,1,1,...
-                1,1,1,1,1,1,1,1,...
-                1,1,1,1,1,1,1,1,...
-                1,1,1,1,1,1,1,1,...
-                1,1,1,1,0,0,1,1,...
-                0,1,0,0,0,0,0,0];
-
+        1,1,1,1,1,1,1,1,...
+        1,1,1,1,1,1,1,1,...
+        1,1,1,1,1,1,1,1,...
+        1,1,1,1,0,0,1,1,...
+        0,1,0,0,0,0,0,0];
+    
     for i = 1:nBodyParts
         BeA_DecParam.FS(i).featNames = body_parts{i};
         BeA_DecParam.FS(i).weight = weight(i);
     end
     BeA_DecParam.selection = selection;
     %% Aanlysis -> Behavior Decomposing
-
-    % BeA_SegParam.L1
-    BeA_DecParam.L1.ralg = 'merge';
-    BeA_DecParam.L1.redL = 5;
-    BeA_DecParam.L1.calg = 'density';
-    BeA_DecParam.L1.kF = 96;
-
-    % BeA_SegParam.L2
-    BeA_DecParam.L2.kerType = 'g';
-    BeA_DecParam.L2.kerBand = 'nei';
-    BeA_DecParam.L2.k = 24; % Cluster number
-    BeA_DecParam.L2.nMi = 100; % Minimum lengths (ms)
-    BeA_DecParam.L2.nMa = 2000; % Maximum lengths (ms)
-    BeA_DecParam.L2.Ini = 'p'; % Initialization method
-
+    
+    % BeA_SegParam.paraP
+    BeA_DecParam.paraP.ralg = 'merge';
+    BeA_DecParam.paraP.redL = 5;
+    BeA_DecParam.paraP.calg = 'density';
+    BeA_DecParam.paraP.kF = 96;
+    
+    % BeA_SegParam.paraM
+    BeA_DecParam.paraM.kerType = 'g';
+    BeA_DecParam.paraM.kerBand = 'nei';
+    BeA_DecParam.paraM.k = 30; % Number of segment types
+    BeA_DecParam.paraM.nMi = 100; % Minimum lengths (ms)
+    BeA_DecParam.paraM.nMa = 2000; % Maximum lengths (ms)
+    BeA_DecParam.paraM.Ini = 'p'; % Initialization method
+    BeA_DecParam.paraM.sigma = 30;
+    
     behavior_decomposing(BeA_DecParam);
-
-    save(['.\data\BeA_Struct\', fileNames{iData,1}], 'BeA', '-v7.3')
+    
+    %% Reclustering movements with velocity dimension
+    kR = 11;
+    labels = recluster_Movement(BeA.BeA_DecData.paraM.MedData, kR);
+    
+    BeA.reClusData = BeA.BeA_DecData.paraM.MedData;
+    BeA.reClusData.G = L2G_Slow(labels);
+    BeA.reClusData.kR = kR;
+    
+    disp('saving, please wait......')
+    save(['..\..\data\shank3\BeA_struct\', fileNames{iData,1}(1:end-4), '_BeA_Struct.mat'], 'BeA', '-v7.3')
+    disp('save successfully!')
+    disp(iData)
 end
 

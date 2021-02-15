@@ -4,12 +4,12 @@ function behavior_decomposing(BeA_DecParam)
 %
 % Input
 %   BeA_DecParam       -  parameters for behavior decomposition
-%       - BeA_DecParam.L1	-  parameters for layer 1
+%       - BeA_DecParam.paraP	-  parameters for layer 1
 %           - calg          -  clustering algorithm type, {'kmeans'} | 'density'
 %           - ralg          -  reduction algorithm type, {'merge'} | 'ave'
 %           - redL          -  maximum segment length
 %           - kF            -  frame cluster, needed if the calg is 'kmeans'
-%       - BeA_DecParam.L2	-  parameters for layer 2
+%       - BeA_DecParam.paraM	-  parameters for layer 2
 %           - kerType       -  kernel type, 'g' | 'st' | 'bi'
 %           	'g':  Gaussian kernel
 %               'st': Self Tunning kernel. See the paper in NIPS 2004, Self-Tuning Spectral Clustering
@@ -26,11 +26,11 @@ function behavior_decomposing(BeA_DecParam)
 % Output
 %   global BeA.BeA_DecData
 %       - BeA_DecData.K     - PxP matrix saving the distance matrix.
-%       - BeA_DecData.L1    - BeA data of layer 1
+%       - BeA_DecData.paraP    - BeA data of layer 1
 %           ReMap:          - mapping list of layer 1 with data
 %           Seglist:        - decomposition results of layer 1
 %           MedData:        - intermediate variables
-%       - BeA_DecData.L2    - BeA data of layer 2
+%       - BeA_DecData.paraM    - BeA data of layer 2
 %           ReMap:          - mapping list of layer 2 with data
 %           Seglist:        - decomposition results of layer 2
 %           MedData:        - intermediate variables
@@ -44,21 +44,20 @@ global BeA
 timer_all = clock;
 fs = BeA.DataInfo(1).VideoInfo.FrameRate;
 
-paraP.k = BeA_DecParam.L1.kF;
+paraP.k = BeA_DecParam.paraP.kF;
 paraP.kF = paraP(1,1).k;
-paraP.redL = BeA_DecParam.L1.redL;
-paraP.calg = BeA_DecParam.L1.calg;
-paraP.ralg = BeA_DecParam.L1.ralg;
+paraP.redL = BeA_DecParam.paraP.redL;
+paraP.calg = BeA_DecParam.paraP.calg;
+paraP.ralg = BeA_DecParam.paraP.ralg;
 
-paraM.k = BeA_DecParam.L2.k;
+paraM.k = BeA_DecParam.paraM.k;
 paraM.kF = 'f';
-paraM.nMi = round((fs*BeA_DecParam.L2.nMi/1000) / (paraP.redL));
-paraM.nMa = round((fs*BeA_DecParam.L2.nMa/1000) / (paraP.redL));
-paraM.ini = BeA_DecParam.L2.Ini;
+paraM.nMi = round((fs*BeA_DecParam.paraM.nMi/1000) / (paraP.redL));
+paraM.nMa = round((fs*BeA_DecParam.paraM.nMa/1000) / (paraP.redL));
+paraM.ini = BeA_DecParam.paraM.Ini;
 paraM.nIni = 1;
 paraM.kerType = 'g';
 paraM.kerBand = 'nei';
-paraM.sigma = 12;
 
 selIdx = BeA_DecParam.selection;
 data = BeA.BeA_DecData.XYZ(selIdx==1, :);
@@ -70,7 +69,13 @@ addMes2log(1, ['Decomposing poses, time elapse: ' num2str(etime(clock,timer)) 's
 
 %% Calculating kernel matrix
 timer = clock;
-K = conKnl_DTAK(conDist(DP_X, DP_X), paraM.kerType, paraM.kerBand, paraM.sigma);
+D = conDist(DP_X, DP_X);
+if ~isfield(BeA_DecParam.paraM, 'sigma')
+    nei = ps([], paraM.kerBand, .1);
+    BeA_DecParam.paraM.sigma = bandG(D, nei);
+end
+paraM.sigma = BeA_DecParam.paraM.sigma;
+K = conKnl_DTAK(D, paraM.kerType, paraM.kerBand, paraM.sigma);
 addMes2log(1, ['Calculating kernel matrix, time elapse: ' num2str(etime(clock,timer)) 'seconds'], 0, 1)
 
 %% Decompose self movements
@@ -111,12 +116,12 @@ Seg_cell{2,1} = Seglist;
 
 BeA_DecData.K = K;
 BeA_DecData.DP_X = DP_X;
-BeA_DecData.L1.ReMap = decBehavior(1).s;
-BeA_DecData.L1.Seglist = Seg_cell{1};
-BeA_DecData.L1.MedData = decBehavior(1);
-BeA_DecData.L2.ReMap = decBehavior(2).s;
-BeA_DecData.L2.Seglist = Seg_cell{2};
-BeA_DecData.L2.MedData = decBehavior(2);
+BeA_DecData.paraP.ReMap = decBehavior(1).s;
+BeA_DecData.paraP.Seglist = Seg_cell{1};
+BeA_DecData.paraP.MedData = decBehavior(1);
+BeA_DecData.paraM.ReMap = decBehavior(2).s;
+BeA_DecData.paraM.Seglist = Seg_cell{2};
+BeA_DecData.paraM.MedData = decBehavior(2);
 
 BeA_DecData.XY = BeA.BeA_DecData.XYZ;
 
@@ -124,15 +129,6 @@ BeA_DecParam.paraP = paraP;
 BeA_DecParam.paraM = paraM;
 BeA.BeA_DecData = BeA_DecData;
 BeA.BeA_DecParam = BeA_DecParam;
-
-%% Reclustering movements with velocity dimension
-paraL.Nc = 2;
-paraL.MinD = 0.3;
-paraL.Nn = 30;
-labels = recluster_Movement(paraL, segDM);
-
-BeA.BeA_DecData.L2.reClusData = BeA.BeA_DecData.L2.MedData;
-BeA.BeA_DecData.L2.reClusData.G = L2G_Slow(labels);
 
 addMes2log(1, ['Decomposing completed, time elapse: ' num2str(etime(clock, timer_all)) 'seconds'], 0, 1)
 

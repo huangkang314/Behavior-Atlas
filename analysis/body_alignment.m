@@ -98,6 +98,7 @@ temp_XYZ = out_XYZ;
 body_size = (temp_XYZ(SDSDimens(1,1),:).^2+temp_XYZ(SDSDimens(1,2),:).^2+temp_XYZ(SDSDimens(1,3),:).^2).^0.5;
 median_index = median(body_size);
 corr_prop = SDSize./median_index;
+% corr_prop = 1;
 out_XYZ = temp_XYZ*corr_prop;
 
 %% varible connection--write

@@ -12,7 +12,6 @@ function labels = re_cluster(embedding, n_clus)
 % History
 %   create  -  Kang Huang  (kang.huang@siat.ac.cn), 03-02-2020
 
-global HBT
 
 % interp color map
 n_genColor = 10;
